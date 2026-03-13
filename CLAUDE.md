@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Alert2 is a project currently in early development. This file will be updated as the project evolves.
+Alert2 is a project to program a Campbell Scientific data logger and an AL200 or AL200X to send data using the Alert2 protocol.
 
 ## Repository Structure
 
