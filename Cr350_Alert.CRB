@@ -119,6 +119,17 @@ Sub Record_Tip_Time
   Tip_Timestamps(dt(6))  = SecsSince1990(TimeStampVal, 4)
 EndSub
 
+Function BuildSensorData() As String * 256
+  'Returns the type-01 sensor payload for a timed IND.
+  'Add, remove, or reorder SensorReport() calls here to change the sensor set.
+  Dim data As String * 256
+  data = SensorReport(PrecipID,  Round(Precip_Tips, 0),         "1")
+  data = data & SensorReport(RadarID,   Round(Radar_GH * 100, 0),     "1")
+  data = data & SensorReport(BubblerID, Round(SDI2_Values(1) * 100, 0), "1")
+  data = data & SensorReport(BatteryID, Round(BattV * 100, 0),         "1")
+  BuildSensorData = data
+EndFunction
+
 Sub Clear_Tip_Time
   Dim i As Long
   For i = 1 To 60
@@ -200,8 +211,17 @@ BeginProg
         CallTable(OneMinute)
 
         If Precip_Flag OR Radar_Flag OR Bubbler_Flag
-          'Call Send_Event_IND
-          Call Send_Timed_IND
+          'Build event sensor data only for sensors whose flag is set
+          Dim EventData As String * 256
+          EventData = ""
+          If Radar_Flag
+            EventData = EventData & SensorReport(RadarID,   Round(Radar_GH * 100, 0),       "1")
+          EndIf
+          If Bubbler_Flag
+            EventData = EventData & SensorReport(BubblerID, Round(SDI2_Values(1) * 100, 0), "1")
+          EndIf
+          'Call Send_Event_IND(EventData)
+          Call Send_Timed_IND(BuildSensorData())
           Precip_Flag = False
           Radar_Flag = False
           Bubbler_Flag = False
@@ -218,14 +238,14 @@ BeginProg
 
       'Hourly Alert2
       If TimeIntoInterval(0,60,Min) Then
-          Call Send_Timed_IND
+          Call Send_Timed_IND(BuildSensorData())
       EndIf
       If TimeIntoInterval(0, 5, Min) Then
         CallTable(FiveMinuteData)
       EndIf
 
       If Force_ALERT2
-        Call Send_Timed_IND
+        Call Send_Timed_IND(BuildSensorData())
         Force_ALERT2 = False
       EndIf
     NextScan

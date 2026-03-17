@@ -25,7 +25,11 @@ Sub Send_to_AL200(hexStr as String * 256 )
   'SerialOutBlock(ALERT2_COM, TempArr, n)
 EndSub
 
-Sub Send_Event_IND
+Sub Send_Event_IND(SensorData As String * 256)
+  'SensorData: caller-built type-01 sensor payload for general sensors (Radar, Bubbler, etc.).
+  'Build it conditionally in the caller based on which flags are set.
+  'Tipping bucket (type-02) report is built internally here since it needs Tip_Timestamps.
+
   Dim Header As String * 48
   Dim Parameter As String * 48
   Dim Packet As String * 256
@@ -33,22 +37,19 @@ Sub Send_Event_IND
   Dim Report As String * 256
   Dim Precip_Report As String * 256
   Dim GH_Report As String * 256
-  Dim Sensor As String * 128
   Dim ReportAddress As Long
-  Dim c as Long
+  Dim c As Long
   Dim time_offsets As String * 124
   Dim IND_time As Long
-  Dim IND_TimeStamp As String *24
+  Dim IND_TimeStamp As String * 24
   Dim precip_value_hex As String * 64
-
   Dim source_address As String
   Dim address_as_byte As String
-  Dim i as Long
+  Dim i As Long
   Dim AL2_Precip_Val As Long
 
   c = 0
   time_offsets = ""
-  Report = ""
 
   RealTime(dt())
   IND_TimeStamp = dt(1) & "-" & dt(2) & "-" & dt(3) & " " & dt(4) & ":" & dt(5) & ":" & dt(6)
@@ -71,13 +72,13 @@ Sub Send_Event_IND
   Parameter = Parameter & source_address
   Parameter = Replace(Parameter, "{parameter_length}", ByteLength(source_address))
 
-  'Report
-  ReportHeader = "00{full_report_length}" '00 Report Type, Length, 70 control byte moved down 5 lines
+  ReportHeader = "00{full_report_length}"
 
+  'Type-02 tipping bucket report (built internally — requires Tip_Timestamps)
   If Precip_Flag
     Report = "{sensor_id}1{value_len}{value}{time_offsets}"
     Report = Replace(Report, "{sensor_id}", PrecipID)
-    For i=1 To 60
+    For i = 1 To 60
       If Tip_Timestamps(i) > 0
         c += 1
         time_offsets = time_offsets & IntToHexStr(IND_time - Tip_Timestamps(i))
@@ -91,9 +92,9 @@ Sub Send_Event_IND
     Else
       AL2_Precip_Val = Precip_Tips
     EndIf
-    precip_value_hex = IntToHexStr(Precip_Tips)
+    precip_value_hex = IntToHexStr(AL2_Precip_Val)
 
-    While Len(precip_value_hex)/2 <> c
+    While Len(precip_value_hex) / 2 <> c
       precip_value_hex = "00" & precip_value_hex
     Wend
     Report = Replace(Report, "{value}", precip_value_hex)
@@ -102,23 +103,14 @@ Sub Send_Event_IND
     Precip_Report = ""
   EndIf
 
-  If Radar_Flag OR Bubbler_Flag
-    Report = "01{report_length}"
-    Sensor = ""
-    'Self Report
-    'Report type 01 for general sensor report, 02 for Tipping bucket report.
-    If Radar_Flag
-      Sensor = Sensor & SensorReport(RadarID, Round(Radar_GH * 100, 0), "1")
-    EndIf
-    If Bubbler_Flag
-      Sensor = Sensor & SensorReport(RadarID, Round(Radar_GH * 100, 0), "1")
-    EndIf
-    GH_Report = "01" & ByteLength(Sensor) & Sensor
+  'Type-01 general sensor report from caller-provided data
+  If Len(SensorData) > 0
+    GH_Report = "01" & ByteLength(SensorData) & SensorData
   Else
     GH_Report = ""
   EndIf
 
-  'Combine Reports
+  'Combine reports
   Report = "70" & Precip_Report & GH_Report
   ReportHeader = Replace(ReportHeader, "{full_report_length}", ByteLength(Report))
   Packet = Parameter & ReportHeader & Report
@@ -135,27 +127,19 @@ Sub Send_Event_IND
   Bubbler_Flag = False
 EndSub
 
-Sub Send_Timed_IND
+Sub Send_Timed_IND(SensorData As String * 256)
+  'SensorData: caller-built type-01 sensor payload (concatenation of SensorReport() calls).
+  'Add or remove sensors in BuildSensorData() in Cr350_Alert.CRB.
 
   Dim Header As String * 48
   Dim Parameter As String * 48
   Dim Packet As String * 256
   Dim ReportHeader As String * 48
   Dim Report As String * 256
-  Dim Precip_Report As String * 256
-  Dim GH_Report As String * 256
-  Dim Sensor As String * 128
   Dim ReportAddress As Long
-
   Dim source_address As String
   Dim address_as_byte As String
   Dim report_length As String
-  Dim i as Long
-  Dim c as Long
-  Dim time_offsets as String * 124
-  Dim IND_time As Long
-  Dim precip_value_hex As String * 64
-  Dim AL2_Precip_Val As Long
 
   If Test_Alert
     ReportAddress = TestStationID
@@ -174,82 +158,19 @@ Sub Send_Timed_IND
   Parameter = Parameter & source_address
   Parameter = Replace(Parameter, "{parameter_length}", ByteLength(source_address))
 
-  'Self Report
- 'Need to make this iterative for multiple sensors'
-  ReportHeader = "00{full_report_length}" '00 Report Type, Length
-  'Report type 01 for general sensor report, 02 for Tipping bucket report, will use 01 for all sensors including Tipping bucket unless 02 is needed for CCRFD.
+  'Build type-01 general sensor report from caller-provided data
+  ReportHeader = "00{full_report_length}"
+  report_length = ByteLength(SensorData)
+  Report = "01{report_length}" & SensorData
+  Report = Replace(Report, "{report_length}", report_length)
+  Report = "70" & Report '70 control byte must wrap report length
+  ReportHeader = Replace(ReportHeader, "{full_report_length}", ByteLength(Report))
 
-  'Precip
-  If Precip_Flag And False 'False used for as temporary fix.
-    Report = "{sensor_id}1{value_len}{value}{time_offsets}"
-    Report = Replace(Report, "{sensor_id}", PrecipID)
-    For i=1 To 60
-      If Tip_Timestamps(i) > 0
-        c += 1
-        time_offsets = time_offsets & IntToHexStr(IND_time - Tip_Timestamps(i))
-      EndIf
-    Next i
-    Report = Replace(Report, "{value_len}", c)
-    Report = Replace(Report, "{time_offsets}", time_offsets)
-
-    If Test_Alert
-      AL2_Precip_Val = Test_Precip_Tips
-    Else
-      AL2_Precip_Val = Precip_Tips
-    EndIf
-
-    precip_value_hex = IntToHexStr(Precip_Tips)
-
-    While Len(precip_value_hex)/2 <> c
-      precip_value_hex = "00" & precip_value_hex
-    Wend
-    Report = Replace(Report, "{value}", precip_value_hex)
-    Precip_Report = "02" & ByteLength(Report) & Report
-  Else
-    Report = ""
-    Sensor = SensorReport(PrecipID, Round(Precip_Tips,0), "1") 'Converts Rain into an integer
-    Report = Report & Sensor
-  EndIf
-
-  'Radar
-  Report_Debug = Radar_GH
-  Sensor = SensorReport(RadarID, Round(Radar_GH *100, 0), "1")
-  Report = Report & Sensor
-
-  'Bubbler
-  Sensor = SensorReport(BubblerID, Round(Radar_GH *100, 0), "1")
-  Report = Report & Sensor
-
-  'Battery
-  Sensor = SensorReport(BatteryID, Round(BattV *100 ,0), "1")'
-  Report = Report & Sensor
-
-  'Placeholder for GPS
-
-  If Precip_Flag
-    'Combine Reports
-    GH_Report = "01" & ByteLength(Report)
-    Report = "70" & Precip_Report & GH_Report
-    ReportHeader = Replace(ReportHeader, "{full_report_length}", ByteLength(Report))
-    Packet = Parameter & ReportHeader & Report
-    Header = Replace(Header, "{packet_length}", ByteLength(Packet))
-    Packet = Header & Packet
-    AL2_IND = Packet
-    Last_Sent_IND = "Timed"
-
-  Else
-    report_length = ByteLength(Report)
-    Report = "01{report_length}" & Report
-    Report = Replace(Report, "{report_length}", report_length)
-    Report = "70" & Report '70 is control byte, need to add last to include in report length'
-    ReportHeader = Replace(ReportHeader, "{full_report_length}", ByteLength(Report))
-
-    Packet = Parameter & ReportHeader & Report
-    Header = Replace(Header, "{packet_length}", ByteLength(Packet))
-    Packet = Header & Packet
-    AL2_IND = Packet
-    Last_Sent_IND = "Timed"
-  EndIf
+  Packet = Parameter & ReportHeader & Report
+  Header = Replace(Header, "{packet_length}", ByteLength(Packet))
+  Packet = Header & Packet
+  AL2_IND = Packet
+  Last_Sent_IND = "Timed"
 
   CallTable(ALERT2_Table)
   Call Send_to_AL200(Packet)
