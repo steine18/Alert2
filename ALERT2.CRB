@@ -1,0 +1,176 @@
+'=============================
+'   ALERT2 Packet Construction and Transmission
+'=============================
+
+Sub Record_Tip_Time
+  If Tip_Count < 60 Then
+    Tip_Count += 1
+    RealTime(dt())
+    TimeStampVal = dt(1) & "-" & dt(2) & "-" & dt(3) & " " & dt(4) & ":" & dt(5) & ":" & dt(6)
+    Tip_Timestamps(Tip_Count) = SecsSince1990(TimeStampVal, 0)
+  EndIf
+EndSub
+
+Sub Clear_Tip_Time
+  Dim i As Long
+  For i = 1 To 60
+    Tip_Timestamps(i) = 0
+  Next i
+  Tip_Count = 0
+EndSub
+
+Sub Send_to_AL200(hexStr As String * 256)
+  Dim i As Long
+  Dim Chunk As String * 2
+  If (Len(hexStr) Mod 2) <> 0 Then Exit Sub
+  For i = 1 To Len(hexStr) Step 2
+    Chunk = Mid(hexStr, i, 2)
+    If Test_RS232
+      SerialOut(ALERT2_COM, Chunk, "", 0, 0)
+    Else
+      SerialOutBlock(ALERT2_COM, HexToDec(Chunk), 1)
+    EndIf
+  Next i
+EndSub
+
+Sub Send_Event_IND
+  Dim ReportAddress As Long
+  Dim AL2_Precip_Val As Long
+  Dim address_bytes As String * 16
+  Dim IND_Address As String * 24
+  Dim Parameter As String * 48
+  Dim IND_TimeStamp As String * 24
+  Dim IND_time As Long
+  Dim accum As String * 8
+  Dim offsets As String * 128
+  Dim TBRG As String * 160
+  Dim Sensors As String * 128
+  Dim GSR As String * 160
+  Dim APDU As String * 256
+  Dim SelfReport As String * 256
+  Dim Packet As String * 256
+  Dim i As Long
+  Dim offset As Long
+
+  ' Station address and precip value (test mode aware)
+  If Test_Alert
+    ReportAddress = TestStationID
+    AL2_Precip_Val = Round(Test_Precip_Tips, 0)
+  Else
+    ReportAddress = StationID
+    AL2_Precip_Val = Round(Precip_Tips, 0)
+  EndIf
+
+  ' Set Parameters TLV (0x0A) containing IND Address TLV (0x18)
+  address_bytes = IntToHexStr(ReportAddress)
+  IND_Address = "18" & ByteLength(address_bytes) & address_bytes
+  Parameter = "0A" & ByteLength(IND_Address) & IND_Address
+
+  ' Current time for computing tip offsets
+  RealTime(dt())
+  IND_TimeStamp = dt(1) & "-" & dt(2) & "-" & dt(3) & " " & dt(4) & ":" & dt(5) & ":" & dt(6)
+  IND_time = SecsSince1990(IND_TimeStamp, 0)
+
+  ' TBRG (Type 02) — only if precipitation was flagged
+  If Precip_Flag
+    ' 2-byte accumulator (zero-padded to 4 hex chars)
+    accum = IntToHexStr(AL2_Precip_Val)
+    While Len(accum) < 4
+      accum = "00" & accum
+    Wend
+    ' 1-byte per-tip offsets (seconds before transmission)
+    offsets = ""
+    For i = 1 To Tip_Count
+      offset = IND_time - Tip_Timestamps(i)
+      If offset > 255 Then offset = 255
+      If offset < 0 Then offset = 0
+      offsets = offsets & IntToHexStr(offset)
+    Next i
+    TBRG = "00" & "12" & accum & offsets
+    TBRG = "02" & ByteLength(TBRG) & TBRG
+  EndIf
+
+  ' GSR (Type 01) — stage sensors if flagged, battery always
+  Sensors = ""
+  If Radar_Flag
+    Sensors = Sensors & SensorReport(RadarID, Round(Radar_GH * 100, 0), "1")
+  EndIf
+  If Bubbler_Flag
+    Sensors = Sensors & SensorReport(BubblerID, Round(SDI2_Values(1) * 100, 0), "1")
+  EndIf
+  Sensors = Sensors & SensorReport(BatteryID, Round(BattV * 100, 0), "1")
+  GSR = "01" & ByteLength(Sensors) & Sensors
+
+  ' APDU: control byte 0x70 + reports
+  If Precip_Flag
+    APDU = "70" & TBRG & GSR
+  Else
+    APDU = "70" & GSR
+  EndIf
+
+  ' Self-Report TLV (0x00)
+  SelfReport = "00" & ByteLength(APDU) & APDU
+
+  ' Full packet: AL22b prefix + total length + Parameter + SelfReport
+  Packet = Parameter & SelfReport
+  Packet = AL2_Prefix & ByteLength(Packet) & Packet
+
+  AL2_IND = Packet
+  Last_Sent_IND = "Event"
+  CallTable(ALERT2_Table)
+  Call Send_to_AL200(Packet)
+  Call Clear_Tip_Time
+EndSub
+
+Sub Send_Timed_IND
+  Dim ReportAddress As Long
+  Dim AL2_Precip_Val As Long
+  Dim address_bytes As String * 16
+  Dim IND_Address As String * 24
+  Dim Parameter As String * 48
+  Dim Sensors As String * 128
+  Dim GSR As String * 160
+  Dim APDU As String * 192
+  Dim SelfReport As String * 224
+  Dim Packet As String * 256
+
+  ' Station address and precip value (test mode aware)
+  If Test_Alert
+    ReportAddress = TestStationID
+    AL2_Precip_Val = Round(Test_Precip_Tips, 0)
+  Else
+    ReportAddress = StationID
+    AL2_Precip_Val = Round(Precip_Tips, 0)
+  EndIf
+
+  ' Set Parameters TLV (0x0A) containing IND Address TLV (0x18)
+  address_bytes = IntToHexStr(ReportAddress)
+  IND_Address = "18" & ByteLength(address_bytes) & address_bytes
+  Parameter = "0A" & ByteLength(IND_Address) & IND_Address
+
+  ' Sensor reports
+  Sensors = SensorReport(PrecipID, AL2_Precip_Val, "1")
+  Sensors = Sensors & SensorReport(RadarID, Round(Radar_GH * 100, 0), "1")
+  Sensors = Sensors & SensorReport(BubblerID, Round(SDI2_Values(1) * 100, 0), "1")
+  Sensors = Sensors & SensorReport(BatteryID, Round(BattV * 100, 0), "1")
+  ' TODO: GPS clock status (GPSID) — requires querying AL200 Clock Status (0x7F) via Com2
+
+  ' GSR Type 01 TLV
+  GSR = "01" & ByteLength(Sensors) & Sensors
+
+  ' APDU: control byte 0x70 + GSR
+  APDU = "70" & GSR
+
+  ' Self-Report TLV (0x00)
+  SelfReport = "00" & ByteLength(APDU) & APDU
+
+  ' Full packet: AL22b prefix + total length + Parameter + SelfReport
+  Packet = Parameter & SelfReport
+  Packet = AL2_Prefix & ByteLength(Packet) & Packet
+
+  AL2_IND = Packet
+  Last_Sent_IND = "Timed"
+  CallTable(ALERT2_Table)
+  Call Send_to_AL200(Packet)
+  Call Clear_Tip_Time
+EndSub

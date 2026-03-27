@@ -1,0 +1,16 @@
+'=============================
+'   Sensor Subroutines
+'=============================
+
+Sub Read_Radar
+  If Calibrate_SDI
+    'Calibrate Radar'
+    SDI12Recorder(RadarSDI(),1,Radar_SDI_Address,"M!",1.0,0)
+    Radar_Offset = Radar_GH - RadarSDI(2)
+    Calibrate_SDI = False
+  EndIf
+
+  SDI12Recorder(RadarSDI(),1,Radar_SDI_Address,"M!",1.0,0)
+  Radar_Raw = RadarSDI(1)
+  Radar_GH = Radar_Offset + Radar_Raw
+EndSub

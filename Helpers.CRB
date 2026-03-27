@@ -1,0 +1,61 @@
+'=============================
+'   Helper Functions
+'=============================
+
+Function IntToHexStr(val as Long) As String
+  Dim hexChars As String * 16
+  Dim result as String * 16
+  Dim byteVal, nibHigh, nibLow As Long
+  Dim numBytes AS Long
+  Dim i As Long
+
+  hexChars = "0123456789ABCDEF"
+  result = ""
+
+  'Determine number of bytes needed
+  numBytes = 0
+  Do
+    numBytes = numBytes + 1
+  Loop Until (val >> (numBytes * 8)) = 0
+
+  'Build hex string big-endian
+  For i = numBytes -1 To 0 Step -1
+    byteVal = (val >> (i * 8)) AND &HFF
+    nibHigh = (byteVal >> 4) AND &HF
+    nibLow = byteVal AND &HF
+    result = result & Mid(hexChars, nibHigh + 1, 1) & Mid(hexChars, nibLow + 1, 1)
+  Next i
+  IntToHexStr = result
+EndFunction
+
+Function SensorReport(id as String, value as Long, format as Long) as String * 64
+  Dim Sensor as String * 100
+  Dim Val as String
+  Sensor = "{sensor_id}{format}{sensor_length}{value}"
+  Sensor = Replace(Sensor, "{sensor_id}", id)
+  Sensor = Replace(Sensor, "{format}", format)
+  Val = IntToHexStr(value)
+  Sensor = Replace(Sensor, "{sensor_length}", Len(Val)/2)
+  Sensor = Replace(Sensor, "{value}", val)
+  SensorReport = Sensor
+EndFunction
+
+Function ByteLength(str_val as String * 200) As String
+  ByteLength = IntToHexStr(Len(str_val)/2)
+EndFunction
+
+Function HexCharToNibble(c As String * 1) As Long
+    Dim a As Long
+    a = ASCII(c)
+    If a >= ASCII("0") And a <= ASCII("9") Then
+        HexCharToNibble = a - ASCII("0")
+    ElseIf a >= ASCII("A") And a <= ASCII("F") Then
+        HexCharToNibble = 10 + (a - ASCII("A"))
+    Else
+        HexCharToNibble = -1   ' invalid
+    EndIf
+EndFunction
+
+Function RealTimeSS90(strT as String *100) As String
+  RealTimeSS90 = SecsSince1990(strT, 0)
+EndFunction
