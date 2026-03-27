@@ -254,6 +254,7 @@ Helpers must come before ALERT2 since `Send_Timed_IND` and `Send_Event_IND` call
 
 - **Language**: CRBasic (Campbell Scientific proprietary BASIC dialect)
 - **IDE**: CRBasic Editor (part of LoggerNet or PC400). Use `.CRB` extension. Note: the editor may show false "undefined symbol" errors for names defined in included files — this is a known editor limitation and does not affect compilation or execution on the logger.
+- **Include syntax**: CRBasic uses `Include` (no `#` prefix). `#Include` will produce an "Unknown instruction" compile error.
 - **Deployment**: Deploy all four `.CRB` files to the CR350 via USB or LoggerNet. Set `Cr350_Alert.CRB` as the running program.
 - **Serial comms**: ALERT2 uses `Com2` in binary mode (`SerialOutBlock`). `Test_RS232 = True` switches to ASCII hex output for debugging with a terminal emulator.
 - **`PreserveVariables`** means tip counts and offsets persist across power cycles — reset `Precip_Tips` and `Radar_Offset` intentionally when needed.
