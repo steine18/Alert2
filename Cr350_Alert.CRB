@@ -111,9 +111,9 @@ EndTable
 '=============================
 '   Includes
 '=============================
-#Include "CPU:Helpers.CRB"
-#Include "CPU:Sensors.CRB"
-#Include "CPU:ALERT2.CRB"
+Include "CPU:Helpers.CRB"
+Include "CPU:Sensors.CRB"
+Include "CPU:ALERT2.CRB"
 
 '=============================
 '   Begin Program

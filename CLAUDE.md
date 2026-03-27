@@ -229,7 +229,7 @@ All `Public` variables are readable/writable from LoggerNet/RTMC. `PreserveVaria
 
 ## File Structure
 
-The program is split into four files. All files must be present on the datalogger's `CPU:` drive. `#Include` performs inline text substitution, so declaration order matters — the includes must appear before `BeginProg`.
+The program is split into four files. All files must be present on the datalogger's `CPU:` drive. `Include` performs inline text substitution, so declaration order matters — the includes must appear before `BeginProg`.
 
 | File | Contents |
 |------|----------|
@@ -241,9 +241,9 @@ The program is split into four files. All files must be present on the datalogge
 Include order in `Cr350_Alert.CRB` (after variable/table declarations, before `BeginProg`):
 
 ```vb
-#Include "CPU:Helpers.CRB"
-#Include "CPU:Sensors.CRB"
-#Include "CPU:ALERT2.CRB"
+Include "CPU:Helpers.CRB"
+Include "CPU:Sensors.CRB"
+Include "CPU:ALERT2.CRB"
 ```
 
 Helpers must come before ALERT2 since `Send_Timed_IND` and `Send_Event_IND` call `SensorReport` and `IntToHexStr`.
