@@ -34,15 +34,20 @@ Sub Send_to_AL200(hexStr As String * 256)
 EndSub
 
 Function Query_GPS_Status() As Long
-  ' Queries the AL200 for Clock Status parameter (IND API type 0x7F).
-  ' Returns the clock status byte (0 = no lock, 1 = locked), or 0 on timeout/error.
-  ' Sends a Get Parameters request (0x0B) and scans the binary response for TLV 0x7F.
+  ' Queries the AL200 for Clock Status parameter (IND API v2.0, type 0x7F, read-only).
+  ' Defined values (range 0, 2-4):
+  '   0x0 = accurate GPS time; TDMA media access
+  '   0x2 = stale time (set since power-on but has drifted); random/ALOHA media access
+  '   0x3 = time never set since power-on; random/ALOHA media access
+  '   0x4 = accurate for timestamping only (e.g. NTP), not TDMA; random/ALOHA media access
+  ' Returns 0x3 on timeout or parse error — "never set" is the safest unknown state and
+  ' correctly signals to the network to use random mode rather than falsely claiming TDMA.
   Dim RxBytes(24) As Long
   Dim RxCount As Long
   Dim i As Long
 
-  ' Default to 0xFF (unknown/no lock) — 0 means GPS locked, so 0 would be a false positive on error
-  Query_GPS_Status = &HFF
+  ' Default to 0x3 (time never set) — safer than 0 which would falsely claim GPS lock
+  Query_GPS_Status = &H3
   If Test_RS232 Then Exit Function
 
   ' Flush receive buffer before querying
