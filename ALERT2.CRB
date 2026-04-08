@@ -41,7 +41,8 @@ Function Query_GPS_Status() As Long
   Dim RxCount As Long
   Dim i As Long
 
-  Query_GPS_Status = 0
+  ' Default to 0xFF (unknown/no lock) — 0 means GPS locked, so 0 would be a false positive on error
+  Query_GPS_Status = &HFF
   If Test_RS232 Then Exit Function
 
   ' Flush receive buffer before querying
