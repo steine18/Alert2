@@ -221,7 +221,16 @@ All `Public` variables are readable/writable from LoggerNet/RTMC. `PreserveVaria
 
 ### Not Yet Implemented
 
-- ~~GPS clock status report (sensor ID `GPSID = "10"`)~~ — **Implemented.** `Query_GPS_Status()` in `ALERT2.CRB` sends a Get Parameters request (`0x0B`, param type `0x7F`) to the AL200 over `Com2`, waits 200 ms, then parses the binary response to extract the clock status byte. Both `Send_Timed_IND` and `Send_Event_IND` call this function and include the result as a `GPSID` sensor report in the GSR.
+- ~~GPS clock status report (sensor ID `GPSID = "10"`)~~ — **Implemented.** `Query_GPS_Status()` in `ALERT2.CRB` sends a Get Parameters request (`0x0B`, param type `0x7F`) to the AL200 over `Com2`, waits 200 ms, then parses the binary response to extract the clock status byte. Both `Send_Timed_IND` and `Send_Event_IND` call this function and include the result as a `GPSID` sensor report in the GSR. On query failure or when `Test_RS232` is active, returns `0x3` (time never set) as a safe default. Clock status values per IND API v2.0 spec (type `0x7F`, read-only, range 0, 2–4):
+
+  | Value | Meaning | Media Access |
+  |-------|---------|--------------|
+  | `0x0` | Accurate GPS time | TDMA |
+  | `0x2` | Stale — set since power-on but has since drifted | Random/ALOHA |
+  | `0x3` | Never set since power-on | Random/ALOHA |
+  | `0x4` | Accurate for timestamping only (e.g. NTP), not TDMA | Random/ALOHA |
+
+  Value `0x1` is not defined in the spec (range skips it).
 - **`Read_Radar` calibration uses `RadarSDI(2)` but normal reads use `RadarSDI(1)`** (`Sensors.CRB`) — both use the same `M!` command. If index 1 is the correct gage height field, the calibration offset is computed against the wrong value. Verify which SDI-12 response index the radar sensor returns gage height on.
 - **NTP time sync** — CR350 clock can be synced via `NetworkTimeProtocol()` over PPP. A commented-out stub exists in the fast scan (`Cr350_Alert.CRB`). Determine COM port, sync interval, and whether to tie it to the hourly transmission or a separate schedule.
 
@@ -236,7 +245,7 @@ The program is split into four files. All files must be present on the datalogge
 | `Cr350_Alert.CRB` | Main file: constants, `Public`/`Dim` declarations, data tables, `BeginProg` with both scan sequences |
 | `Helpers.CRB` | Pure utility functions: `IntToHexStr`, `SensorReport`, `ByteLength`, `HexCharToNibble`, `RealTimeSS90` |
 | `Sensors.CRB` | Sensor subroutines: `Read_Radar`. Future bubbler calibration subs belong here too. |
-| `ALERT2.CRB` | Packet construction and transmission: `Send_to_AL200`, `Send_Timed_IND`, `Send_Event_IND`, `Record_Tip_Time`, `Clear_Tip_Time` |
+| `ALERT2.CRB` | Packet construction and transmission: `Send_to_AL200`, `Query_GPS_Status`, `Send_Timed_IND`, `Send_Event_IND`, `Record_Tip_Time`, `Clear_Tip_Time` |
 
 Include order in `Cr350_Alert.CRB` (after variable/table declarations, before `BeginProg`):
 
