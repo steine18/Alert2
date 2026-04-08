@@ -221,7 +221,7 @@ All `Public` variables are readable/writable from LoggerNet/RTMC. `PreserveVaria
 
 ### Not Yet Implemented
 
-- GPS clock status report (sensor ID `GPSID = "10"`) — requires querying AL200 Clock Status parameter (type `0x7F`) over `Com2`. Add to both `Send_Timed_IND` and `Send_Event_IND`. See IND API spec section on Parameter TLVs.
+- ~~GPS clock status report (sensor ID `GPSID = "10"`)~~ — **Implemented.** `Query_GPS_Status()` in `ALERT2.CRB` sends a Get Parameters request (`0x0B`, param type `0x7F`) to the AL200 over `Com2`, waits 200 ms, then parses the binary response to extract the clock status byte. Both `Send_Timed_IND` and `Send_Event_IND` call this function and include the result as a `GPSID` sensor report in the GSR.
 - **`Read_Radar` calibration uses `RadarSDI(2)` but normal reads use `RadarSDI(1)`** (`Sensors.CRB`) — both use the same `M!` command. If index 1 is the correct gage height field, the calibration offset is computed against the wrong value. Verify which SDI-12 response index the radar sensor returns gage height on.
 - **NTP time sync** — CR350 clock can be synced via `NetworkTimeProtocol()` over PPP. A commented-out stub exists in the fast scan (`Cr350_Alert.CRB`). Determine COM port, sync interval, and whether to tie it to the hourly transmission or a separate schedule.
 
