@@ -42,8 +42,7 @@ Function Query_GPS_Status() As Long
   '   0x4 = accurate for timestamping only (e.g. NTP), not TDMA; random/ALOHA media access
   ' Returns 0x3 on timeout or parse error — "never set" is the safest unknown state and
   ' correctly signals to the network to use random mode rather than falsely claiming TDMA.
-  Dim RxBytes(24) As Long
-  Dim RxCount As Long
+  Dim RxStr As String * 24
   Dim i As Long
 
   ' Default to 0x3 (time never set) — safer than 0 which would falsely claim GPS lock
@@ -64,17 +63,16 @@ Function Query_GPS_Status() As Long
   SerialOutBlock(ALERT2_COM, &H01, 1)
   SerialOutBlock(ALERT2_COM, &H7F, 1)
 
-  ' Allow 200 ms for the AL200 to respond
-  Delay(1, 200, mSec)
+  ' Read response: 250ms timeout (25 centiseconds), no terminator (0), up to 20 bytes.
+  ' SerialIn with a timeout avoids blocking when the AL200 is not connected — the previous
+  ' SerialInBlock(... 20) would wait indefinitely for 20 bytes that never arrive.
+  SerialIn(RxStr, ALERT2_COM, 25, 0, 20)
 
-  ' Read response bytes into Long array (1 byte per element)
-  RxCount = SerialInBlock(ALERT2_COM, RxBytes(1), 20)
-
-  ' Scan for Clock Status TLV (0x7F); byte after length field is the clock status value
-  ' Expected response: AL22b (5) + total_len (1) + 0B (1) + content_len (1) + 7F (1) + val_len (1) + val (1+)
-  For i = 1 To RxCount - 2
-    If RxBytes(i) = &H7F Then
-      Query_GPS_Status = RxBytes(i + 2)
+  ' Scan for Clock Status TLV (0x7F); byte at i+2 is the clock status value
+  ' Expected response: AL22b (5) + total_len (1) + 0B (1) + content_len (1) + 7F (1) + val_len (1) + val (1)
+  For i = 1 To Len(RxStr) - 2
+    If ASC(Mid(RxStr, i, 1)) = &H7F Then
+      Query_GPS_Status = ASC(Mid(RxStr, i + 2, 1))
       Exit For
     EndIf
   Next i
