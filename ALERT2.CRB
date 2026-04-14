@@ -81,7 +81,6 @@ EndFunction
 Sub Send_Event_IND
   Dim ReportAddress As Long
   Dim AL2_Precip_Val As Long
-  Dim GPS_Status_Val As Long
   Dim address_bytes As String * 16
   Dim IND_Address As String * 24
   Dim Parameter As String * 48
@@ -106,9 +105,6 @@ Sub Send_Event_IND
     ReportAddress = StationID
     AL2_Precip_Val = Round(Precip_Tips, 0)
   EndIf
-
-  ' Query AL200 for GPS clock status before building packet
-  GPS_Status_Val = Query_GPS_Status()
 
   ' Set Parameters TLV (0x0A) containing IND Address TLV (0x18)
   address_bytes = IntToHexStr(ReportAddress)
@@ -148,7 +144,7 @@ Sub Send_Event_IND
     Sensors = Sensors & SensorReport(BubblerID, Round(SDI2_Values(1) * 100, 0), "1")
   EndIf
   Sensors = Sensors & SensorReport(BatteryID, Round(BattV * 100, 0), "1")
-  Sensors = Sensors & SensorReport(GPSID, GPS_Status_Val, "1")
+  Sensors = Sensors & SensorReport(GPSID, GPS_Clock_Status, "1")
   GSR = "01" & ByteLength(Sensors) & Sensors
 
   ' APDU: control byte 0x70 + reports
@@ -175,7 +171,6 @@ EndSub
 Sub Send_Timed_IND
   Dim ReportAddress As Long
   Dim AL2_Precip_Val As Long
-  Dim GPS_Status_Val As Long
   Dim address_bytes As String * 16
   Dim IND_Address As String * 24
   Dim Parameter As String * 48
@@ -194,9 +189,6 @@ Sub Send_Timed_IND
     AL2_Precip_Val = Round(Precip_Tips, 0)
   EndIf
 
-  ' Query AL200 for GPS clock status before building packet
-  GPS_Status_Val = Query_GPS_Status()
-
   ' Set Parameters TLV (0x0A) containing IND Address TLV (0x18)
   address_bytes = IntToHexStr(ReportAddress)
   IND_Address = "18" & ByteLength(address_bytes) & address_bytes
@@ -207,7 +199,7 @@ Sub Send_Timed_IND
   Sensors = Sensors & SensorReport(RadarID, Round(Radar_GH * 100, 0), "1")
   Sensors = Sensors & SensorReport(BubblerID, Round(SDI2_Values(1) * 100, 0), "1")
   Sensors = Sensors & SensorReport(BatteryID, Round(BattV * 100, 0), "1")
-  Sensors = Sensors & SensorReport(GPSID, GPS_Status_Val, "1")
+  Sensors = Sensors & SensorReport(GPSID, GPS_Clock_Status, "1")
 
   ' GSR Type 01 TLV
   GSR = "01" & ByteLength(Sensors) & Sensors

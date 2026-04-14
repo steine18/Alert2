@@ -33,6 +33,7 @@ Public Last_Sent_IND As String * 5
 Public Calibrate_SDI As Boolean
 Public Force_Measurement As Boolean
 Public Force_ALERT2 As Boolean
+Public GPS_Clock_Status As Long
 Public Test_RS232 As Boolean
 Public Test_Alert As Boolean
 Public Test_Count As Long
@@ -124,6 +125,7 @@ BeginProg
     Modem_On = True
     Radar_SDI_Address = "0"
 
+    GPS_Clock_Status = &H3
     SerialOpen(ALERT2_COM, ALERT2_BAUD, 0, 0, 100)
     'Tipping bucket scan every second
     Scan (1,Sec,0,0)
@@ -180,6 +182,9 @@ BeginProg
         Previous_Bubbler_GH = SDI2_Values(1)
 
         CallTable(OneMinute)
+
+        ' Query GPS clock status once per cycle; stored in GPS_Clock_Status for use by send functions
+        GPS_Clock_Status = Query_GPS_Status()
 
         If Precip_Flag OR Radar_Flag OR Bubbler_Flag
           Call Send_Event_IND
