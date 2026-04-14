@@ -143,9 +143,9 @@ BeginProg
 
       If Force_Measurement OR Calibrate_SDI
         Call Read_Radar
-        'TimeOffset = NetworkTimeProtocol("time.google.com",-1,1000)
-
-
+        If Force_Measurement Then
+          Radar_Flag = True
+        EndIf
         Force_Measurement = False
       EndIf
     NextScan
