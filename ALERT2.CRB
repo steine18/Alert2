@@ -71,8 +71,8 @@ Function Query_GPS_Status() As Long
   ' Scan for Clock Status TLV (0x7F); byte at i+2 is the clock status value
   ' Expected response: AL22b (5) + total_len (1) + 0B (1) + content_len (1) + 7F (1) + val_len (1) + val (1)
   For i = 1 To Len(RxStr) - 2
-    If ASC(Mid(RxStr, i, 1)) = &H7F Then
-      Query_GPS_Status = ASC(Mid(RxStr, i + 2, 1))
+    If ASCII(Mid(RxStr, i, 1)) = &H7F Then
+      Query_GPS_Status = ASCII(Mid(RxStr, i + 2, 1))
       Exit For
     EndIf
   Next i
