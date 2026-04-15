@@ -54,7 +54,6 @@ Dim j As Long
 Public Report_Debug As Float
 Public Scan_Step As Long      'Last completed step in slow sequence (0 = not started)
 Public Slow_Scan_Count As Long 'Increments every slow-sequence cycle; confirms scan is alive
-Public NTP_Result As Long     'Pre-adjustment clock error in ms; negative = NTP failure
 
 
 '=============================
@@ -76,10 +75,6 @@ Const BubblerID = "09"
 
 Const AL2_Prefix = "414C323262"
 
-'NTP Constants
-Const NTP_Server = "pool.ntp.org"
-Const NTP_UTC_Offset = 0    ' seconds offset from UTC; 0 = keep clock in UTC
-Const NTP_Max_Ms = 1000     ' max clock error (ms) before adjustment is applied
 
 '=============================
 '   Data Tables
@@ -222,9 +217,8 @@ BeginProg
           Test_Count = 0
         EndIf
 
-        Scan_Step = 10 'Hourly NTP sync + Send_Timed_IND
+        Scan_Step = 10 'Hourly Send_Timed_IND
         If TimeIntoInterval(0,60,Min) Then
-          NTP_Result = NetworkTimeProtocol(NTP_Server, NTP_UTC_Offset, NTP_Max_Ms)
           Call Send_Timed_IND
         EndIf
 
