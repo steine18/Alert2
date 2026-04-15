@@ -204,6 +204,8 @@ BeginProg
         Scan_Step = 9 'Test mode timeout
         If Test_Alert
           Test_Count += 1
+        Else
+          Test_Count = 0
         EndIf
         If Test_Count > 60
           Test_Alert = False

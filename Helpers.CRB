@@ -46,7 +46,7 @@ Function SensorReport(id as String, value as Long, format as Long) as String * 6
   SensorReport = Sensor
 EndFunction
 
-Function ByteLength(str_val as String * 200) As String
+Function ByteLength(str_val as String * 256) As String
   ByteLength = IntToHexStr(Len(str_val)/2)
 EndFunction
 
