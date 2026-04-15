@@ -52,6 +52,7 @@ Dim j As Long
 Public Report_Debug As Float
 Public Scan_Step As Long      'Last completed step in slow sequence (0 = not started)
 Public Slow_Scan_Count As Long 'Increments every slow-sequence cycle; confirms scan is alive
+Public NTP_Result As Long     'Pre-adjustment clock error in ms; negative = PPP/NTP failure
 
 
 '=============================
@@ -74,6 +75,13 @@ Const GPSID = "10"
 Const BubblerID = "09"
 
 Const AL2_Prefix = "414C323262"
+
+'NTP Constants (RV55 via RS-232 on Com1)
+Const NTP_COM = Com1
+Const NTP_BAUD = 115200
+Const NTP_Server = "pool.ntp.org"
+Const NTP_UTC_Offset = 0    ' seconds offset from UTC; 0 = keep clock in UTC
+Const NTP_Max_Ms = 1000     ' max clock error (ms) before adjustment is applied
 
 '=============================
 '   Data Tables
@@ -212,8 +220,14 @@ BeginProg
           Test_Count = 0
         EndIf
 
-        Scan_Step = 10 'Hourly Send_Timed_IND
+        Scan_Step = 10 'Hourly NTP sync + Send_Timed_IND
         If TimeIntoInterval(0,60,Min) Then
+          If PPPOpen(NTP_COM, NTP_BAUD, "", "", "", 30, 0, 1) Then
+            NTP_Result = NetworkTimeProtocol(NTP_Server, NTP_UTC_Offset, NTP_Max_Ms)
+            PPPClose(NTP_COM)
+          Else
+            NTP_Result = -1  ' PPP connection failed
+          EndIf
           Call Send_Timed_IND
         EndIf
 
