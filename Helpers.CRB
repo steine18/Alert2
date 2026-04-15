@@ -12,6 +12,12 @@ Function IntToHexStr(val as Long) As String
   hexChars = "0123456789ABCDEF"
   result = ""
 
+  ' Guard: NaN sensor readings cast to negative Long — return "00" to avoid infinite loop
+  If val < 0 Then
+    IntToHexStr = "00"
+    Exit Function
+  EndIf
+
   'Determine number of bytes needed
   numBytes = 0
   Do
@@ -40,7 +46,7 @@ Function SensorReport(id as String, value as Long, format as Long) as String * 6
   SensorReport = Sensor
 EndFunction
 
-Function ByteLength(str_val as String * 200) As String
+Function ByteLength(str_val as String * 256) As String
   ByteLength = IntToHexStr(Len(str_val)/2)
 EndFunction
 
