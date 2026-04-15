@@ -68,11 +68,18 @@ Function Query_GPS_Status() As Long
   ' SerialInBlock(... 20) would wait indefinitely for 20 bytes that never arrive.
   SerialIn(RxStr, ALERT2_COM, 25, 0, 20)
 
-  ' Scan for Clock Status TLV (0x7F); byte at i+2 is the clock status value
-  ' Expected response: AL22b (5) + total_len (1) + 0B (1) + content_len (1) + 7F (1) + val_len (1) + val (1)
-  For i = 1 To Len(RxStr) - 2
+  ' Scan for Clock Status TLV (0x7F); byte at i+2 is the clock status value.
+  ' Expected response: AL22b (5) + total_len (1) + 0B (1) + content_len (1) + 7F (1) + val_len (1) + val (1) = 11 bytes.
+  ' Loop bound is Len(RxStr) (not Len-2) because when GPS status = 0x00, the null value byte
+  ' terminates the CRBasic string at length 10 — the 0x7F type byte sits at position 9,
+  ' which the old Len-2 bound of 8 never reached. When i+2 exceeds Len, the value was 0x00.
+  For i = 1 To Len(RxStr)
     If ASCII(Mid(RxStr, i, 1)) = &H7F Then
-      Query_GPS_Status = ASCII(Mid(RxStr, i + 2, 1))
+      If (i + 2) <= Len(RxStr) Then
+        Query_GPS_Status = ASCII(Mid(RxStr, i + 2, 1))
+      Else
+        Query_GPS_Status = 0  ' value byte was 0x00 (accurate GPS / TDMA mode)
+      EndIf
       Exit For
     EndIf
   Next i
