@@ -107,6 +107,7 @@ DataTable(ALERT2_Table, True, 129600)
   Sample(1,Radar_GH,FP2)
   Sample(1,SDI2_Values(),FP2)
   Sample(1,BattV,FP2)
+  Sample(1,GPS_Clock_Status,Long)
 EndTable
 
 
