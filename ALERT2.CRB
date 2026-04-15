@@ -6,8 +6,9 @@ Sub Record_Tip_Time
   If Tip_Count < 60 Then
     Tip_Count += 1
     RealTime(dt())
-    TimeStampVal = dt(1) & "-" & dt(2) & "-" & dt(3) & " " & dt(4) & ":" & dt(5) & ":" & dt(6)
-    Tip_Timestamps(Tip_Count) = SecsSince1990(TimeStampVal, 0)
+    ' Store seconds-of-day as a Long — avoids SecsSince1990() which returns a 32-bit float
+    ' (~128 second precision at current epoch, making all offsets appear as 0).
+    Tip_Timestamps(Tip_Count) = dt(4) * 3600 + dt(5) * 60 + dt(6)
   EndIf
 EndSub
 
@@ -91,7 +92,6 @@ Sub Send_Event_IND
   Dim address_bytes As String * 16
   Dim IND_Address As String * 24
   Dim Parameter As String * 48
-  Dim IND_TimeStamp As String * 24
   Dim IND_time As Long
   Dim accum As String * 8
   Dim offsets As String * 128
@@ -118,10 +118,9 @@ Sub Send_Event_IND
   IND_Address = "18" & ByteLength(address_bytes) & address_bytes
   Parameter = "0A" & ByteLength(IND_Address) & IND_Address
 
-  ' Current time for computing tip offsets
+  ' Current time for computing tip offsets — seconds-of-day as Long integer
   RealTime(dt())
-  IND_TimeStamp = dt(1) & "-" & dt(2) & "-" & dt(3) & " " & dt(4) & ":" & dt(5) & ":" & dt(6)
-  IND_time = SecsSince1990(IND_TimeStamp, 0)
+  IND_time = dt(4) * 3600 + dt(5) * 60 + dt(6)
 
   ' TBRG (Type 02) — only if precipitation was flagged
   If Precip_Flag
@@ -134,8 +133,8 @@ Sub Send_Event_IND
     offsets = ""
     For i = 1 To Tip_Count
       offset = IND_time - Tip_Timestamps(i)
+      If offset < 0 Then offset = offset + 86400  ' midnight rollover
       If offset > 255 Then offset = 255
-      If offset < 0 Then offset = 0
       offsets = offsets & IntToHexStr(offset)
     Next i
     TBRG = "00" & "12" & accum & offsets

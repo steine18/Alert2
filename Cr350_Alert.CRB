@@ -43,7 +43,6 @@ Dim dt(9) As Long
 Dim Precip_Flag As Boolean
 Dim Radar_Flag As Boolean
 Dim Bubbler_Flag As Boolean
-Dim TimeStampVal As String * 100
 Dim Tip_Timestamps(61) As Long
 Dim Tip_Count As Long
 Dim j As Long
