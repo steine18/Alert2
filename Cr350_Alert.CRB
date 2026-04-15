@@ -76,9 +76,7 @@ Const BubblerID = "09"
 
 Const AL2_Prefix = "414C323262"
 
-'NTP Constants (RV55 via RS-232 on Com1)
-Const NTP_COM = Com1
-Const NTP_BAUD = 115200
+'NTP Constants
 Const NTP_Server = "pool.ntp.org"
 Const NTP_UTC_Offset = 0    ' seconds offset from UTC; 0 = keep clock in UTC
 Const NTP_Max_Ms = 1000     ' max clock error (ms) before adjustment is applied
@@ -226,9 +224,7 @@ BeginProg
 
         Scan_Step = 10 'Hourly NTP sync + Send_Timed_IND
         If TimeIntoInterval(0,60,Min) Then
-          PPPOpen(NTP_COM, NTP_BAUD, "", "", "", 30)
           NTP_Result = NetworkTimeProtocol(NTP_Server, NTP_UTC_Offset, NTP_Max_Ms)
-          PPPClose()
           Call Send_Timed_IND
         EndIf
 
