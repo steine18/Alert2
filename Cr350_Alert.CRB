@@ -49,9 +49,10 @@ Dim Tip_Count As Long
 Dim j As Long
 
 
-'Debug Varubles
-
+'Debug Variables
 Public Report_Debug As Float
+Public Scan_Step As Long      'Last completed step in slow sequence (0 = not started)
+Public Slow_Scan_Count As Long 'Increments every slow-sequence cycle; confirms scan is alive
 
 
 '=============================
@@ -156,16 +157,21 @@ BeginProg
     'SDI-12 scan every minute
     SlowSequence
       Scan (60, Sec, 0, 0)
+        Slow_Scan_Count += 1
+        Scan_Step = 1 'Battery
         Battery(BattV)
-        'Read Radar'
+
+        Scan_Step = 2 'Read_Radar
         Call Read_Radar
-        'Placeholder for bubbler'
+
+        Scan_Step = 3 'Modem control
         If Modem_On
           SW12 (SW12_1,1)
         Else
           SW12(SW12_1,0)
         EndIf
 
+        Scan_Step = 4 'Radar delta check
         If ABS(Radar_GH - Previous_Radar_GH) > 0.015
           Radar_Flag = True
           Previous_Radar_GH = Radar_GH
@@ -173,7 +179,7 @@ BeginProg
           Previous_Radar_GH = Radar_GH
         EndIf
 
-        'Read Bubbler
+        Scan_Step = 5 'Read Bubbler
         SDI12Recorder(SDI2_Values(),1,"1","M!",1.0,0)
 
         If ABS(SDI2_Values(1) - Previous_Bubbler_GH) > 0.015
@@ -181,11 +187,13 @@ BeginProg
         EndIf
         Previous_Bubbler_GH = SDI2_Values(1)
 
+        Scan_Step = 6 'OneMinute table
         CallTable(OneMinute)
 
-        ' Query GPS clock status once per cycle; stored in GPS_Clock_Status for use by send functions
+        Scan_Step = 7 'GPS query
         GPS_Clock_Status = Query_GPS_Status()
 
+        Scan_Step = 8 'Send_Event_IND (if flagged)
         If Precip_Flag OR Radar_Flag OR Bubbler_Flag
           Call Send_Event_IND
           Precip_Flag = False
@@ -193,7 +201,7 @@ BeginProg
           Bubbler_Flag = False
         EndIf
 
-      'Prevents the test channel from being used for more than 1 hour
+        Scan_Step = 9 'Test mode timeout
         If Test_Alert
           Test_Count += 1
         EndIf
@@ -202,18 +210,23 @@ BeginProg
           Test_Count = 0
         EndIf
 
-      'Hourly Alert2
-      If TimeIntoInterval(0,60,Min) Then
+        Scan_Step = 10 'Hourly Send_Timed_IND
+        If TimeIntoInterval(0,60,Min) Then
           Call Send_Timed_IND
-      EndIf
-      If TimeIntoInterval(0, 5, Min) Then
-        CallTable(FiveMinuteData)
-      EndIf
+        EndIf
 
-      If Force_ALERT2
-        Call Send_Timed_IND
-        Force_ALERT2 = False
-      EndIf
-    NextScan
+        Scan_Step = 11 'FiveMinuteData table
+        If TimeIntoInterval(0, 5, Min) Then
+          CallTable(FiveMinuteData)
+        EndIf
+
+        Scan_Step = 12 'Force_ALERT2
+        If Force_ALERT2
+          Call Send_Timed_IND
+          Force_ALERT2 = False
+        EndIf
+
+        Scan_Step = 0 'Scan complete
+      NextScan
 
 EndProg
