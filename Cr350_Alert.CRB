@@ -34,6 +34,8 @@ Public Calibrate_SDI As Boolean
 Public Force_Measurement As Boolean
 Public Force_ALERT2 As Boolean
 Public GPS_Clock_Status As Long
+Public StationID As Long
+Public TestStationID As Long
 Public Test_RS232 As Boolean
 Public Test_Alert As Boolean
 Public Test_Count As Long
@@ -66,12 +68,10 @@ Const Site_Elevation = 527 '1730 ft to m
 'ALERT2 Constants
 Const ALERT2_BAUD = 57600
 Const ALERT2_COM = Com2
-Const StationID = 30235
-Const TestStationID = 30299
 Const PrecipID = "00"
 Const RadarID = "07"
 Const BatteryID = "08"
-Const GPSID = "10"
+Const GPSID = "0A"
 Const BubblerID = "09"
 
 Const AL2_Prefix = "414C323262"
@@ -129,6 +129,10 @@ Include "CPU:ALERT2.CRB"
 '   Begin Program
 '=============================
 BeginProg
+    ' Initialize station IDs only if unset — preserves user edits through power cycles
+    If StationID = 0 Then StationID = 30235
+    If TestStationID = 0 Then TestStationID = 30299
+
     Test_RS232 = False
     Scanning_On = True
     Modem_On = True

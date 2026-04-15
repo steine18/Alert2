@@ -93,6 +93,7 @@ Sub Send_Event_IND
   Dim IND_Address As String * 24
   Dim Parameter As String * 48
   Dim IND_time As Long
+  Dim IND_dt(9) As Long
   Dim accum As String * 8
   Dim offsets As String * 128
   Dim TBRG As String * 160
@@ -118,9 +119,9 @@ Sub Send_Event_IND
   IND_Address = "18" & ByteLength(address_bytes) & address_bytes
   Parameter = "0A" & ByteLength(IND_Address) & IND_Address
 
-  ' Current time for computing tip offsets — seconds-of-day as Long integer
-  RealTime(dt())
-  IND_time = dt(4) * 3600 + dt(5) * 60 + dt(6)
+  ' Current time for computing tip offsets — local array avoids race with fast-scan RealTime(dt())
+  RealTime(IND_dt())
+  IND_time = IND_dt(4) * 3600 + IND_dt(5) * 60 + IND_dt(6)
 
   ' TBRG (Type 02) — only if precipitation was flagged
   If Precip_Flag
@@ -134,6 +135,7 @@ Sub Send_Event_IND
     For i = 1 To Tip_Count
       offset = IND_time - Tip_Timestamps(i)
       If offset < 0 Then offset = offset + 86400  ' midnight rollover
+      If offset < 0 Then offset = 0              ' safety floor
       If offset > 255 Then offset = 255
       offsets = offsets & IntToHexStr(offset)
     Next i
