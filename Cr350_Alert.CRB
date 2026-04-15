@@ -55,6 +55,7 @@ Public Report_Debug As Float
 Public Scan_Step As Long      'Last completed step in slow sequence (0 = not started)
 Public Slow_Scan_Count As Long 'Increments every slow-sequence cycle; confirms scan is alive
 Public NTP_Result As Long     'Pre-adjustment clock error in ms; negative = PPP/NTP failure
+Public NTP_PPP As Long        'PPPOpen result: 1=connected, 0=failed
 
 
 '=============================
@@ -226,12 +227,13 @@ BeginProg
 
         Scan_Step = 10 'Hourly NTP sync + Send_Timed_IND
         If TimeIntoInterval(0,60,Min) Then
-          If PPPOpen(NTP_COM, NTP_BAUD, "", "", "", 30, 0, 1) Then
+          NTP_PPP = PPPOpen(NTP_COM, NTP_BAUD, "", "", "", 30)
+          If NTP_PPP Then
             NTP_Result = NetworkTimeProtocol(NTP_Server, NTP_UTC_Offset, NTP_Max_Ms)
-            PPPClose(NTP_COM)
           Else
             NTP_Result = -1  ' PPP connection failed
           EndIf
+          PPPClose()
           Call Send_Timed_IND
         EndIf
 
