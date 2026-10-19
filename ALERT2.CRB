@@ -169,6 +169,7 @@ Sub Send_Event_IND
   Packet = Parameter & SelfReport
   Packet = AL2_Prefix & ByteLength(Packet) & Packet
 
+  Last_Precip_Val = AL2_Precip_Val
   AL2_IND = Packet
   Last_Sent_IND = "Event"
   CallTable(ALERT2_Table)
@@ -222,6 +223,7 @@ Sub Send_Timed_IND
   Packet = Parameter & SelfReport
   Packet = AL2_Prefix & ByteLength(Packet) & Packet
 
+  Last_Precip_Val = AL2_Precip_Val
   AL2_IND = Packet
   Last_Sent_IND = "Timed"
   CallTable(ALERT2_Table)

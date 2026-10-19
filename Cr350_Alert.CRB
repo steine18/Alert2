@@ -55,6 +55,7 @@ Public Report_Debug As Float
 Public Scan_Step As Long      'Last completed step in slow sequence (0 = not started)
 Public Slow_Scan_Count As Long 'Increments every slow-sequence cycle; confirms scan is alive
 Public NTP_Result As Long     'ms pre-adjustment error from last NTP sync; negative = error/no network
+Public Last_Precip_Val As Long 'precip value in the last transmitted packet (test-mode aware)
 
 
 '=============================
@@ -109,7 +110,7 @@ EndTable
 DataTable(ALERT2_Table, True, 129600)
   Sample(1, AL2_IND, String)
   Sample(1, Last_Sent_IND, String)
-  Sample(1,Precip_Tips,FP2)
+  Sample(1,Last_Precip_Val,Long)
   Sample(1,Radar_GH,FP2)
   Sample(1,SDI2_Values(),FP2)
   Sample(1,BattV,FP2)
